@@ -38,7 +38,7 @@ func init() {
 	applyCmd.Flags().StringVarP(&dataId, "id", "d", "", "data id")
 	applyCmd.Flags().StringVarP(&fileType, "type", "t", "", "config file type. e.g: yaml")
 
-	applyCmd.MarkFlagRequired("file")
+	_ = applyCmd.MarkFlagRequired("file")
 
 	rootCmd.AddCommand(applyCmd)
 }

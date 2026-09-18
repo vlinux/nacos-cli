@@ -1,10 +1,19 @@
 package nacos
 
+// PublicNamespace Nacos 控制台里显示的公共命名空间名称。
+// 注意：它的真实命名空间 ID 是空字符串，API 的 tenant 参数必须传空串。
+const PublicNamespace = "public"
+
 type NacosConfig struct {
-	Addr       string `json:"addr" yaml:"addr"`
-	Username   string `json:"username" yaml:"username"`
-	Password   string `json:"password" yaml:"password"`
-	ApiVersion string `json:"apiVersion" yaml:"apiVersion"`
+	Addr        string `json:"addr" yaml:"addr"`
+	Username    string `json:"username" yaml:"username"`
+	Password    string `json:"password" yaml:"password"`
+	ApiVersion  string `json:"apiVersion" yaml:"apiVersion"`
+	Namespace   string `json:"namespace" yaml:"namespace"`
+	Group       string `json:"group" yaml:"group"`
+	AccessToken string `json:"accessToken" yaml:"accessToken"`
+	// Insecure 跳过 HTTPS 证书校验，用于内网自签证书的 Nacos
+	Insecure bool `json:"insecure" yaml:"insecure"`
 }
 
 type NacosOperation struct {
@@ -41,12 +50,15 @@ type ConfigDeleteOperation struct {
 }
 
 var DefaultNacosOperation = NacosOperation{
-	Namespace: "public",
+	Namespace: PublicNamespace,
 	Group:     "DEFAULT_GROUP",
 }
 
 type NacosPageResult struct {
-	PageItems []NacosPageItem `json:"pageItems"`
+	TotalCount     int             `json:"totalCount"`
+	PageNumber     int             `json:"pageNumber"`
+	PagesAvailable int             `json:"pagesAvailable"`
+	PageItems      []NacosPageItem `json:"pageItems"`
 }
 
 type NacosPageItem struct {
@@ -76,4 +88,13 @@ type NacosConfigDetail struct {
 	Use              string `json:"use"`
 	Effect           string `json:"effect"`
 	Schema           string `json:"schema"`
+}
+
+// LoginResult Nacos 登录接口返回体。
+// v1 的 /auth/login 与 v3 的 /auth/user/login 字段兼容，v3 会多返回 username。
+type LoginResult struct {
+	AccessToken string `json:"accessToken"`
+	TokenTTL    int64  `json:"tokenTtl"`
+	GlobalAdmin bool   `json:"globalAdmin"`
+	Username    string `json:"username"`
 }

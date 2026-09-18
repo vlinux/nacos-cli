@@ -7,11 +7,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github/szpinc/nacosctl/pkg/editor"
 	"github/szpinc/nacosctl/pkg/nacos"
 	"github/szpinc/nacosctl/pkg/util"
-	"os"
-	"path/filepath"
 
 	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"
@@ -23,23 +24,29 @@ var (
 )
 
 var getConfig = &cobra.Command{
-	Use:   "config",
+	Use:   "config [dataId]",
 	Short: "nacos config",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		if getAllConfig {
-			dataIds, err := nacosClient.AllConfig(nacos.ConfigGetOperation{
+			// -A 默认跨分组列出全部；只有用户显式传了 -g 才按分组过滤
+			listGroup := ""
+			if cmd.Flags().Changed("group") {
+				listGroup = group
+			}
+
+			items, err := nacosClient.AllConfig(nacos.ConfigGetOperation{
 				NacosOperation: &nacos.NacosOperation{
 					Namespace: namespace,
+					Group:     listGroup,
 				},
 			})
-
 			if err != nil {
 				return err
 			}
 
-			printTable(dataIds)
+			printTable(items)
 			return nil
 		}
 
@@ -56,7 +63,6 @@ var getConfig = &cobra.Command{
 			},
 			DataId: dataId,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -65,31 +71,38 @@ var getConfig = &cobra.Command{
 		return nil
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		dataIds, err := nacosClient.AllConfig(nacos.ConfigGetOperation{
+		if nacosClient == nil {
+			if err := initClient(cmd); err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		}
+
+		items, err := nacosClient.AllConfig(nacos.ConfigGetOperation{
 			NacosOperation: &nacos.NacosOperation{
 				Namespace: namespace,
 			},
 		})
-		for _, dataId := range dataIds {
-			println(dataId.DataId)
-		}
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
-		names := []string{}
 
-		for _, id := range dataIds {
-			names = append(names, id.DataId)
+		names := make([]string, 0, len(items))
+		for _, item := range items {
+			names = append(names, item.DataId)
 		}
 		return names, cobra.ShellCompDirectiveNoFileComp
 	},
 }
 
 var editConfig = &cobra.Command{
-	Use:   "config",
+	Use:   "config <dataId>",
 	Short: "nacos config",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		if len(args) == 0 {
+			return errors.New("data id required")
+		}
 
 		var dataId = args[0]
 
@@ -100,10 +113,8 @@ var editConfig = &cobra.Command{
 			},
 			DataId: dataId,
 		})
-
 		if err != nil {
-			fmt.Println(err.Error())
-			return
+			return err
 		}
 
 		e := editor.NewDefaultEditor([]string{})
@@ -112,17 +123,15 @@ var editConfig = &cobra.Command{
 		buf.Write([]byte(configData.Content))
 
 		edited, file, err := e.LaunchTempFile(fmt.Sprintf("%s-edit-", filepath.Base(os.Args[0])), configData.Type, buf)
-
 		if err != nil {
-			fmt.Println(err.Error())
-			return
+			return err
 		}
 
 		editedMd5 := util.Md5BytesToString(edited)
 
 		if configData.Md5 == editedMd5 {
 			fmt.Println("Not Changed")
-			return
+			return nil
 		}
 
 		defer func(f string) {
@@ -135,7 +144,7 @@ var editConfig = &cobra.Command{
 			fileType = configData.Type
 		}
 
-		err = nacosClient.Edit(nacos.ConfigEditOperation{
+		if err = nacosClient.Edit(nacos.ConfigEditOperation{
 			NacosOperation: &nacos.NacosOperation{
 				Namespace: namespace,
 				Group:     group,
@@ -143,19 +152,17 @@ var editConfig = &cobra.Command{
 			DataId:  dataId,
 			Content: string(edited),
 			Type:    fileType,
-		})
-
-		if err != nil {
-			fmt.Println(err.Error())
-			return
+		}); err != nil {
+			return err
 		}
 
 		fmt.Println("Edited")
+		return nil
 	},
 }
 
 var deleteConfig = &cobra.Command{
-	Use:   "config",
+	Use:   "config <dataId>",
 	Short: "nacos config",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -178,7 +185,8 @@ func init() {
 
 	editConfig.Flags().StringVarP(&fileType, "type", "t", "", "file type")
 
-	getConfig.Flags().BoolVarP(&getAllConfig, "all", "A", false, "If present, list the requested object(s) across all config name")
+	getConfig.Flags().BoolVarP(&getAllConfig, "all", "A", false,
+		"If present, list the requested object(s) across all config name（配合 -g 可按分组过滤）")
 
 	editCmd.AddCommand(editConfig)
 	getCmd.AddCommand(getConfig)
@@ -189,7 +197,7 @@ func printTable(items []nacos.NacosPageItem) {
 	table := uitable.New()
 	table.MaxColWidth = 50
 
-	table.AddRow("ID", "GROUP", "NAMESPACE")
+	table.AddRow("DATA-ID", "GROUP", "NAMESPACE")
 
 	for _, item := range items {
 		if item.Tenant == "" {
