@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -29,6 +30,14 @@ var (
 )
 
 var nacosClient *nacos.Client
+
+// stdinPassword / stdinPasswordRead 保证 --password-stdin 只真正读取一次标准输入。
+// initClient 存在多个调用点（PersistentPreRunE、shell 补全），
+// 若重复读取，第二次会读到 EOF 并直接报错；因此读到的密码要留着重用。
+var (
+	stdinPassword     string
+	stdinPasswordRead bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -117,11 +126,14 @@ func initClient(cmd *cobra.Command) error {
 	}
 
 	if flagPasswordStdin {
-		password, err := readPasswordFromStdin()
-		if err != nil {
-			return err
+		if !stdinPasswordRead {
+			password, err := readPasswordFromStdin(cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			stdinPassword, stdinPasswordRead = password, true
 		}
-		config.Password = password
+		config.Password = stdinPassword
 	}
 
 	nacosClient = nacos.NewClient(config)
@@ -146,9 +158,9 @@ func changedBool(cmd *cobra.Command, name string, value bool) *bool {
 	return &value
 }
 
-// readPasswordFromStdin 从标准输入读取一行作为密码
-func readPasswordFromStdin() (string, error) {
-	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+// readPasswordFromStdin 从 in 读取一行作为密码（去掉行尾换行）
+func readPasswordFromStdin(in io.Reader) (string, error) {
+	line, err := bufio.NewReader(in).ReadString('\n')
 	if err != nil && line == "" {
 		return "", fmt.Errorf("从标准输入读取密码失败: %w", err)
 	}

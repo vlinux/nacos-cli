@@ -28,11 +28,9 @@ var loginCmd = &cobra.Command{
   export NACOS_USERNAME=nacos
   export NACOS_PASSWORD='your-password'
   nacos-cli login`,
+	// nacosClient 已由 rootCmd.PersistentPreRunE 调用 initClient 构建完毕。
+	// 这里不要再调一次 initClient：那会重复消费 --password-stdin 的标准输入。
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := initClient(cmd); err != nil {
-			return err
-		}
-
 		fmt.Println("使用以下配置登录 Nacos：")
 		fmt.Println(nacosClient.Config.Describe())
 
@@ -72,9 +70,6 @@ var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "清除本地缓存的 accessToken",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := initClient(cmd); err != nil {
-			return err
-		}
 		if err := nacosClient.Logout(); err != nil {
 			return err
 		}
