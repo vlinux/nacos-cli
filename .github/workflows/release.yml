@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # generate_release_notes 需要完整提交历史
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test
+        run: go test -race -count=1 ./...
+
+      - name: Build cross-platform binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          # 把 tag 名注入 --version
+          LDFLAGS="-s -w -X main.version=${GITHUB_REF_NAME}"
+          for target in linux/amd64 linux/arm64 darwin/arm64; do
+            os="${target%%/*}"
+            arch="${target##*/}"
+            echo "==> building ${os}/${arch}"
+            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 \
+              go build -trimpath -ldflags "$LDFLAGS" \
+              -o "dist/nacos-cli_${os}_${arch}" .
+          done
+          echo
+          ls -lh dist/
+          echo
+          file dist/*
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: false

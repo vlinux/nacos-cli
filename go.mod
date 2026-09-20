@@ -1,4 +1,4 @@
-module github/szpinc/nacosctl
+module github.com/vlinux/nacos-cli
 
 go 1.20
 

@@ -1,10 +1,10 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Yongheng Liu
+
 package cmd
 
 import (
-	"github/szpinc/nacosctl/pkg/nacos"
+	"github.com/vlinux/nacos-cli/pkg/nacos"
 
 	"github.com/spf13/cobra"
 )

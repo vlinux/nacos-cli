@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github/szpinc/nacosctl/pkg/nacos"
+	"github.com/vlinux/nacos-cli/pkg/nacos"
 
 	"github.com/spf13/cobra"
 )
@@ -64,6 +64,15 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+// SetVersion 由 main 注入构建版本号，用于 nacos-cli --version
+func SetVersion(v string) {
+	if v == "" {
+		v = "dev"
+	}
+	rootCmd.Version = v
+	rootCmd.SetVersionTemplate("nacos-cli version {{.Version}}\n")
 }
 
 func init() {

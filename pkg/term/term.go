@@ -17,7 +17,7 @@ limitations under the License.
 package term
 
 import (
-	"github/szpinc/nacosctl/pkg/interrupt"
+	"github.com/vlinux/nacos-cli/pkg/interrupt"
 	"io"
 	"os"
 	"runtime"

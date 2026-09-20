@@ -2,7 +2,7 @@ package editor
 
 import (
 	"fmt"
-	"github/szpinc/nacosctl/pkg/term"
+	"github.com/vlinux/nacos-cli/pkg/term"
 	"io"
 	"os"
 	"os/exec"

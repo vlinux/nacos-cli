@@ -1,6 +1,6 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Yongheng Liu
+
 package cmd
 
 import (

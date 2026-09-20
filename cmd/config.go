@@ -1,6 +1,6 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Yongheng Liu
+
 package cmd
 
 import (
@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github/szpinc/nacosctl/pkg/editor"
-	"github/szpinc/nacosctl/pkg/nacos"
-	"github/szpinc/nacosctl/pkg/util"
+	"github.com/vlinux/nacos-cli/pkg/editor"
+	"github.com/vlinux/nacos-cli/pkg/nacos"
+	"github.com/vlinux/nacos-cli/pkg/util"
 
 	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"

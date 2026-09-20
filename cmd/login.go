@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github/szpinc/nacosctl/pkg/nacos"
+	"github.com/vlinux/nacos-cli/pkg/nacos"
 
 	"github.com/spf13/cobra"
 )
