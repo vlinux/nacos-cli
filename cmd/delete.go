@@ -10,13 +10,15 @@ import (
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete a resource on the nacos server",
-	Long: `
-		nacos-cli delete config common.yml
-	`,
+	Short: "删除 Nacos 上的资源",
+	Long: `删除 Nacos 上的资源。目前支持 config。
+
+  nacos-cli delete config app.yaml`,
+	Example: "nacos-cli delete config app.yaml",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
+	ValidArgs: []string{"config"},
 }
 
 func init() {

@@ -10,13 +10,14 @@ import (
 // getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
-	Short: "Get a resource from nacos server",
-	Long: `
-		Get a resource from nacos server
-	`,
-	Example: "nacosctl edit config common.yml",
+	Short: "从 Nacos 读取资源",
+	Long: `从 Nacos 读取资源。
+
+  nacos-cli get config              列出配置
+  nacos-cli get config <dataId>     读取单条配置内容`,
+	Example: "nacos-cli get config app.yaml",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 	// ValidArgs: []string{"config"},
 }

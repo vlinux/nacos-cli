@@ -36,6 +36,14 @@ var rootCmd = &cobra.Command{
 	Short: "nacos cli tools",
 	Long: `nacos-cli 用命令行操作 Nacos 配置。
 
+常用命令：
+  nacos-cli get config              列出当前命名空间下的全部配置
+  nacos-cli get config app.yaml     打印单条配置的内容
+  nacos-cli apply -f app.yaml       从本地文件发布/更新配置
+  nacos-cli edit config app.yaml    用 $EDITOR 改配置
+  nacos-cli delete config app.yaml  删除配置
+  nacos-cli login / logout          登录并缓存 accessToken / 清除缓存
+
 凭据优先级（从高到低）：
   命令行参数 > 环境变量 > 配置文件(~/.nacos-cli/config.yaml) > 内置默认值
 

@@ -117,27 +117,33 @@ token 缓存到 `~/.nacos-cli/token-cache.json`（权限 `0600`）。
 **常用命令**
 
 ``` bash
-# 列出全部配置（跨分组）
-nacos-cli get config -A
+# 列出当前命名空间下的全部配置（dataId 省略即可，等价于 -A/--all）
+nacos-cli get config
 
 # 只列某个分组
-nacos-cli get config -A -g MY_GROUP
+nacos-cli get config -g MY_GROUP
 
 # 读一条配置，直接打到 stdout，可以管道给别的命令
-nacos-cli get config common.yaml -n public -g DEFAULT_GROUP
+nacos-cli get config app.yaml
+
+# 读指定命名空间/分组下的单条配置
+nacos-cli get config app.yaml -n dev -g MY_GROUP
 
 # 从本地文件发布/更新配置（dataId 默认取文件名）
-nacos-cli apply -f common.yaml -g DEFAULT_GROUP
+nacos-cli apply -f app.yaml
 
 # 发布并指定 dataId / group
 nacos-cli apply -f /path/to/app.yaml --id app.yaml -g MY_GROUP
 
 # 用 $EDITOR 打开配置改完自动回写
-nacos-cli edit config common.yaml -g DEFAULT_GROUP
+nacos-cli edit config app.yaml -g DEFAULT_GROUP
 
 # 删除
-nacos-cli delete config common.yaml -g DEFAULT_GROUP
+nacos-cli delete config app.yaml -g DEFAULT_GROUP
 ```
+
+> `get config` 的 `dataId` 是可选的：**省略就是列出配置列表，给了就是读那一条**。
+> `-A/--all` 是「列出全部配置」的显式写法，主要用于脚本里写明意图。
 
 **密码不想进 shell 历史**（CI 里常用）
 
@@ -197,6 +203,15 @@ ID。控制台「命名空间」页面里那一列。默认空间比较特殊：
 **HTTPS 自签证书报 x509 错误**
 加 `-k`，或配置文件里写 `insecure: true`。
 
+**配置文件里的 `namespace` 到底生效了没？**
+`nacos-cli get config` 列出来的表格最后一列 `NAMESPACE` 就是实际用的命名空间。
+如果想确认优先级，命令行 `-n` 会覆盖配置文件的 `namespace`。
+
+**`data id required` / 只想看有哪些配置**
+`get config` 的 `dataId` 是**可选**的：省略就列出配置列表，给了就读那一条。
+老版本（含上游）省略时会直接报 `data id required`，很容易被误解成命名空间没配好——
+其实那个报错跟命名空间无关。
+
 **`配置不存在: namespace=... group=... dataId=...`**
 注意 `dataId` 和 `group` 要完全对得上（`DEFAULT_GROUP` 不是 `default_group`）。
 这条报错本身说明鉴权已经通过了。
@@ -228,11 +243,15 @@ token 失效自动重登、无权限时不重登、静态 token 不登录、publ
 
 **顺手修的问题**
 
+- `get config` 省略 `dataId` 时改为「列出配置列表」，不再报 `data id required`
+  （上游必须额外加 `-A` 才列得出来，那个报错很容易被误解成命名空间没生效）
+- `-A` 与 `dataId` 同时传时明确报错，不再静默忽略 `dataId`
 - `public` 命名空间：上游把 `"public"` 当 tenant 传给服务端，导致默认空间永远查不到数据
 - 所有请求补上 `resp.Body.Close()`，修连接泄漏；HTTP 客户端加 30s 超时
 - 「配置不存在」改为按响应体判断——Nacos 2.4.3 返回的是 `200 + 空 body`，不是 404
 - `get config -A` 自动翻页，上游固定 `pageSize=999`，超过会被静默截断
 - `edit config` 不带参数不再 panic；去掉补全回调里的多余输出；运行时错误不再刷整页 `--help`
+- 各子命令补齐 `--help` 说明与示例（上游多为空 `Long`，示例里还写着旧的 `nacosctl`）
 
 > 提醒：`go.mod` 里的 module path 沿用了上游的 `github/szpinc/nacosctl`（少个 `.com`）。
 > 本地编译、交叉编译都没问题，但 `go install` 这类按路径拉取的用法会失败。

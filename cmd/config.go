@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,12 +24,37 @@ var (
 
 var getConfig = &cobra.Command{
 	Use:   "config [dataId]",
-	Short: "nacos config",
-	Long:  ``,
+	Short: "读取配置：给 dataId 读单条，不给则列出全部",
+	Long: `读取 Nacos 配置。
+
+  不传 dataId —— 列出当前命名空间下的配置列表（等价于 -A/--all）
+  传 dataId   —— 把该配置的内容打印到标准输出
+
+命名空间/分组默认取自命令行参数、环境变量或 ~/.nacos-cli/config.yaml。`,
+	Example: `  # 列出当前命名空间的全部配置
+  nacos-cli get config
+
+  # 只列某个分组
+  nacos-cli get config -g MY_GROUP
+
+  # 打印单条配置的内容
+  nacos-cli get config app.yaml
+
+  # 指定分组与命名空间
+  nacos-cli get config app.yaml -g MY_GROUP -n dev`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		if getAllConfig {
-			// -A 默认跨分组列出全部；只有用户显式传了 -g 才按分组过滤
+		// 没给 dataId 时按「列出配置」处理，和 kubectl get 的习惯保持一致；
+		// 上游这里直接报 "data id required"，很容易被误解成命名空间没生效。
+		listMode := getAllConfig || len(args) == 0
+
+		if getAllConfig && len(args) > 0 {
+			return fmt.Errorf("-A/--all 是「列出全部配置」，不能和 dataId %q 一起用；想读单条请去掉 -A", args[0])
+		}
+
+		if listMode {
+			// 默认跨分组列出全部；只有用户显式传了 -g 才按分组过滤
 			listGroup := ""
 			if cmd.Flags().Changed("group") {
 				listGroup = group
@@ -48,10 +72,6 @@ var getConfig = &cobra.Command{
 
 			printTable(items)
 			return nil
-		}
-
-		if len(args) == 0 {
-			return errors.New("data id required")
 		}
 
 		dataId := args[0]
@@ -96,13 +116,15 @@ var getConfig = &cobra.Command{
 
 var editConfig = &cobra.Command{
 	Use:   "config <dataId>",
-	Short: "nacos config",
-	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Short: "用 $EDITOR 打开配置，保存后自动回写",
+	Long: `把配置内容拉到本地临时文件，用 $EDITOR 打开，保存退出后自动回写 Nacos。
+内容没变则不会发起发布。
 
-		if len(args) == 0 {
-			return errors.New("data id required")
-		}
+编辑器取 $EDITOR / $VISUAL，没设置时回退到 vi。`,
+	Example: `  nacos-cli edit config app.yaml
+  nacos-cli edit config app.yaml -g MY_GROUP -n dev`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		var dataId = args[0]
 
@@ -163,13 +185,12 @@ var editConfig = &cobra.Command{
 
 var deleteConfig = &cobra.Command{
 	Use:   "config <dataId>",
-	Short: "nacos config",
-	Long:  ``,
+	Short: "删除配置",
+	Long:  `删除指定配置。删除前请自行确认数据Id 与分组是否正确。`,
+	Example: `  nacos-cli delete config app.yaml
+  nacos-cli delete config app.yaml -g MY_GROUP -n dev`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-
-		if len(args) == 0 {
-			return errors.New("data id required")
-		}
 
 		return nacosClient.DeleteConfig(nacos.ConfigDeleteOperation{
 			NacosOperation: &nacos.NacosOperation{
@@ -183,10 +204,10 @@ var deleteConfig = &cobra.Command{
 
 func init() {
 
-	editConfig.Flags().StringVarP(&fileType, "type", "t", "", "file type")
+	editConfig.Flags().StringVarP(&fileType, "type", "t", "", "配置类型，默认沿用服务端已有的类型")
 
 	getConfig.Flags().BoolVarP(&getAllConfig, "all", "A", false,
-		"If present, list the requested object(s) across all config name（配合 -g 可按分组过滤）")
+		"显式声明「列出全部配置」。不传 dataId 时默认就是这个行为，该参数主要用于脚本里写明意图")
 
 	editCmd.AddCommand(editConfig)
 	getCmd.AddCommand(getConfig)
