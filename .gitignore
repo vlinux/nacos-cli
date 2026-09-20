@@ -6,3 +6,9 @@ dist/
 # 本地测试/编辑器临时文件
 *.tmp
 .DS_Store
+
+# 编辑器临时文件
+*.swp
+*.swo
+*.swx
+.*.swp
