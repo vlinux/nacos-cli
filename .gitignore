@@ -1,6 +1,7 @@
 # 编译产物
 /nacos-cli
 /nacosctl
+/nacos-cli_*
 dist/
 
 # 本地测试/编辑器临时文件
